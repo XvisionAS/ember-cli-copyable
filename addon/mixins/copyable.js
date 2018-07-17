@@ -20,7 +20,15 @@ export default Ember.Mixin.create({
       var copy = _this.get('store').createRecord(modelName);
       copied[id] = copy;
       var queue = [];
-      var clone = function (value) { return value ? JSON.parse(JSON.stringify(value)) : value };
+      var clone = function (value) {
+        if (value instanceof Date) {
+          return new Date(value)
+        }
+        if (value && ( (value === Object(value)) || Array.isArray(value))) {
+          return JSON.parse(JSON.stringify(value))
+        }
+        return value
+      };
       model.eachAttribute(function(attr) {
         switch(Ember.typeOf(options[attr])) {
           case 'undefined':
