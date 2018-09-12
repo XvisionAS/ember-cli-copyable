@@ -67,7 +67,7 @@ export default Ember.Mixin.create({
           default:
         }
 
-        if (rel.constructor === DS.PromiseObject) {
+        if (rel.constructor === DS.PromiseObject || rel.constructor.superclass === DS.PromiseObject) {
 
           queue.push(rel.then(function(obj) {
 
@@ -105,6 +105,10 @@ export default Ember.Mixin.create({
         } else {
           if (meta.kind === 'belongsTo') {
             var obj = rel;
+
+            if (obj.get('content')) {
+              obj = obj.get('content');
+            }
 
             if (obj && obj.get('copyable') && !overwrite) {
               queue.push( obj.copy(passedOptions, copied).then(function(objCopy) {
