@@ -2,8 +2,8 @@ import Ember from 'ember';
 import DS from 'ember-data';
 
 const sequential = function(tasks) {
-  let first    = Ember.RSVP.resolve()
-  const copies = []
+  let   first    = Ember.RSVP.resolve()
+  const copies   = []
   for (let i = 0 ; i < tasks.length; ++i) {
     first = first.then(
       () => tasks[i]()
@@ -11,10 +11,9 @@ const sequential = function(tasks) {
       copy => copies.push(copy)
     )
   }
-  first.then(
+  return first.then(
     () => copies
   )
-  return first
 }
 
 
