@@ -14,6 +14,7 @@ const sequential = function(tasks) {
   first.then(
     () => copies
   )
+  return first
 }
 
 
