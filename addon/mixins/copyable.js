@@ -159,12 +159,6 @@ export default Ember.Mixin.create({
         }
       });
 
-      let first = Ember.RSVP.resolve()
-      for (let i = 0 ; i < queue.length; ++i) {
-        first = first.then(
-          () => queue[i]()
-        )
-      }
       sequential(queue).then(
         () => resolve(copy)
       )
