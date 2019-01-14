@@ -25,8 +25,8 @@ export default Ember.Mixin.create({
       model.eachAttribute((attr, { type, options: attributeOptions }) => {
         switch(Ember.typeOf(options[attr])) {
           case 'undefined':
-						const value = _this.get(attr)
-						const transform = type && Ember.getOwner(_this).lookup(`transform:${type}`)
+            const value = _this.get(attr)
+            const transform = type && Ember.getOwner(_this).lookup(`transform:${type}`)
             if (transform) {
               copy.set(attr,
                 transform.deserialize(
@@ -68,39 +68,36 @@ export default Ember.Mixin.create({
         }
 
         if (rel.constructor === DS.PromiseObject || rel.constructor.superclass === DS.PromiseObject) {
-
-          queue.push(rel.then(function(obj) {
-
-            if (obj && obj.get('copyable') && !overwrite) {
-              return obj.copy(passedOptions, copied).then(function(objCopy) {
-                copy.set(relName, objCopy);
-              });
-
-            } else {
-              copy.set(relName, overwrite || obj);
-            }
-
-          }));
-
-
+          queue.push(
+            () => rel.then(function(obj) {
+              if (obj && obj.get('copyable') && !overwrite) {
+                return obj.copy(passedOptions, copied).then(function(objCopy) {
+                  copy.set(relName, objCopy);
+                });
+              } else {
+                copy.set(relName, overwrite || obj);
+              }
+            })
+          );
         } else if (rel.constructor === DS.PromiseManyArray) {
-
           if (overwrite) {
             copy.get(relName).setObjects(overwrite);
           } else {
-            queue.push(rel.then(function(array) {
-              var resolvedCopies =
-                array.map(function(obj) {
-                  if (obj.get('copyable')) {
-                    return obj.copy(passedOptions, copied);
-                  } else {
-                    return obj;
-                  }
+            queue.push(
+              () => rel.then(function(array) {
+                var resolvedCopies =
+                  array.map(function(obj) {
+                    if (obj.get('copyable')) {
+                      return obj.copy(passedOptions, copied);
+                    } else {
+                      return obj;
+                    }
+                  });
+                return Ember.RSVP.all(resolvedCopies).then(function(copies){
+                  copy.get(relName).setObjects(copies);
                 });
-              return Ember.RSVP.all(resolvedCopies).then(function(copies){
-                copy.get(relName).setObjects(copies);
-              });
-            }));
+              })
+            );
           }
         } else {
           if (meta.kind === 'belongsTo') {
@@ -111,9 +108,11 @@ export default Ember.Mixin.create({
             }
 
             if (obj && obj.get('copyable') && !overwrite) {
-              queue.push( obj.copy(passedOptions, copied).then(function(objCopy) {
-                copy.set(relName, objCopy);
-              }));
+              queue.push( 
+                () => obj.copy(passedOptions, copied).then(function(objCopy) {
+                  copy.set(relName, objCopy);
+                })
+              );
             } else {
               copy.set(relName, overwrite || obj);
             }
@@ -131,9 +130,11 @@ export default Ember.Mixin.create({
                 return obj.copy(passedOptions, copied);
               });
 
-              queue.push( Ember.RSVP.all(copies).then( function(resolvedCopies) {
-                copy.get(relName).setObjects(resolvedCopies);
-              }));
+              queue.push( 
+                () => Ember.RSVP.all(copies).then( function(resolvedCopies) {
+                  copy.get(relName).setObjects(resolvedCopies);
+                })
+              );
 
             } else {
               copy.get(relName).setObjects(overwrite || objs);
@@ -143,10 +144,15 @@ export default Ember.Mixin.create({
         }
       });
 
-
-      Ember.RSVP.all(queue).then(function() {
-        resolve(copy);
-      });
+      let first = Ember.RSVP.resolve()
+      for (let i = 0 ; i < queue.length; ++i) {
+        first = first.then(
+          () => queue[i]()
+        )
+      }
+      first.then(
+        () => resolve(copy)
+      )
     });
   }
 });
