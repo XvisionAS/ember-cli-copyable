@@ -1,6 +1,21 @@
 import Ember from 'ember';
 import DS from 'ember-data';
-import { computed } from '@ember/object';
+
+const sequential = function(tasks) {
+  let first    = Ember.RSVP.resolve()
+  const copies = []
+  for (let i = 0 ; i < tasks.length; ++i) {
+    first = first.then(
+      () => tasks[i]()
+    ).then(
+      copy => copies.push(copy)
+    )
+  }
+  first.then(
+    () => copies
+  )
+}
+
 
 export default Ember.Mixin.create({
   copyable: true,
@@ -85,15 +100,15 @@ export default Ember.Mixin.create({
           } else {
             queue.push(
               () => rel.then(function(array) {
-                var resolvedCopies =
-                  array.map(function(obj) {
+                const resolvedCopies = array.map(function(obj) {
                     if (obj.get('copyable')) {
-                      return obj.copy(passedOptions, copied);
+                      return () => obj.copy(passedOptions, copied);
                     } else {
-                      return obj;
+                      return () => obj;
                     }
                   });
-                return Ember.RSVP.all(resolvedCopies).then(function(copies){
+                
+                return sequential(resolvedCopies).then(function(copies){
                   copy.get(relName).setObjects(copies);
                 });
               })
@@ -150,7 +165,7 @@ export default Ember.Mixin.create({
           () => queue[i]()
         )
       }
-      first.then(
+      sequential(queue).then(
         () => resolve(copy)
       )
     });
