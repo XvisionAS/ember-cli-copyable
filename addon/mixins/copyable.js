@@ -19,7 +19,7 @@ const sequential = function(tasks) {
 
 export default Ember.Mixin.create({
   copyable: true,
-  copy: function(options, copied) {
+  copy: function(options, copied, onProgress) {
     options = options || {};
     copied = copied || {};
 
@@ -160,7 +160,12 @@ export default Ember.Mixin.create({
       });
 
       sequential(queue).then(
-        () => resolve(copy)
+        () => {
+          if (onProgress) {
+            onProgress(modelName)
+          }
+          resolve(copy)
+        }
       )
     });
   }
